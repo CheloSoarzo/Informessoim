@@ -61,15 +61,11 @@ button.s{padding:6px 10px;font-size:.85rem}
 <h1>Informe de servicio</h1>
 
 <div class="card"><h2>Datos generales</h2>
-<label for="cliente">Cliente</label><select id="cliente"><option value="">Seleccione cliente…</option><option>Clinica alemana osorno</option><option>Hospital base osorno</option><option>Imaval</option><option>Hospital Veterinario Santiago</option><option>Zoomundo</option><option>Rucalaf</option><option>Inmevet</option><option>Santa Catalina Buin</option><option>Santa Catalina Paine</option></select>
+<label for="cliente">Cliente</label><select id="cliente"><option value="">Seleccione cliente…</option><option>Centro de Salud San Rafael</option><option>Centro Imagenes INSI</option><option>Centro Medico Colina Salud</option><option>Centro Medico Isapre Fundacion</option><option>Centro Medico Rancagua</option><option>Centro Medico Santa Catalina Buin</option><option>Centro Medico Santa Catalina Paine</option><option>Centro Medico Veterinario Rucalaf</option><option>Centro Scanner Peñaflor</option><option>Clinica Alemana Osorno</option><option>Clinica Altacura</option><option>Clinica Miraflores</option><option>Clinica Veterinaria Hannover</option><option>Clinica Veterinaria Zoomundo</option><option>Hospital Base San Jose Osorno</option><option>Hospital Veterinario Manuel Bulnes</option><option>Hospital Veterinario Santiago</option><option>IMABOX</option><option>IMAVAL</option><option>INMEVET</option><option>San Rafael Centro de Salud</option><option>Villa Alemana Medica</option></select>
 <label for="dir">Dirección</label><input id="dir" autocomplete="off">
 <div class="row">
 <div><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
 <div><label for="tipo">Tipo</label><select id="tipo"><option>Mantenimiento</option><option>Reparación</option><option>Instalación</option><option>Inspección</option></select></div>
-</div>
-<div class="row">
-<div><label for="ini">Hora inicio</label><input id="ini" type="time"></div>
-<div><label for="fin">Hora fin</label><input id="fin" type="time"></div>
 </div>
 <label for="tec">Técnico</label><select id="tec"><option value="">Seleccione técnico…</option><option>Armando Soarzo</option><option>Diego Vega</option><option>Marcelo Soarzo</option><option>Matias Pastrian</option><option>Nicolas Paredes</option></select>
 <div id="svbox"></div>
@@ -77,7 +73,7 @@ button.s{padding:6px 10px;font-size:.85rem}
 
 <div class="card"><h2>Equipo</h2>
 <label for="eq">Tipo de equipo</label>
-<select id="eq"><option value="">Seleccione…</option><option>Tomógrafo</option><option>Resonancia magnética</option><option>Rayos X</option><option>Ecógrafo</option><option>Otro</option></select>
+<select id="eq"><option value="">Seleccione…</option><option>Tomógrafo</option><option>Resonancia magnética</option><option>Rayos X</option><option>Rayos X portátil</option><option>Arco en C</option><option>Ecógrafo</option><option>Otro</option></select>
 <div id="eqbox"></div>
 </div>
 
@@ -119,12 +115,33 @@ button.s{padding:6px 10px;font-size:.85rem}
 <script>
 (function(){
 var $=function(i){return document.getElementById(i)};
-var F=['cliente','dir','fecha','tipo','ini','fin','tec','eq','prob','trab','mat','ncli'];
+var F=['cliente','dir','fecha','tipo','tec','eq','prob','trab','mat','ncli'];
 $('fecha').value=new Date().toISOString().slice(0,10);
 
 // Dirección automática según cliente (editable)
 var ADDR={
-'Hospital base osorno':'Guillermo Buhler 18732, Osorno'
+"Centro de Salud San Rafael":"Antonio Varas 720, Cauquenes",
+"Centro Imagenes INSI":"Vicuña Mackenna 864, Quilpue",
+"Centro Medico Colina Salud":"General San Martin 068, Colina",
+"Centro Medico Isapre Fundacion":"Profesora Amanda Labarca 70, Santiago",
+"Centro Medico Rancagua":"Astorga 19, Rancagua",
+"Centro Medico Santa Catalina Buin":"Anibal Pinto 436, Buin",
+"Centro Medico Santa Catalina Paine":"Raul Sanchez Cerda 57, Paine",
+"Centro Medico Veterinario Rucalaf":"Av Colon 568, Puerto Varas",
+"Centro Scanner Peñaflor":"San Martin 150, Peñaflor",
+"Clinica Alemana Osorno":"Zenteno 1530, Osorno",
+"Clinica Altacura":"Libertador Gral Bernardo O´Higgins 1250, Concepcion",
+"Clinica Miraflores":"Los Fresnos 276, Viña del Mar",
+"Clinica Veterinaria Hannover":"Raul Bitran 1725, La Serena",
+"Clinica Veterinaria Zoomundo":"Pedro Aguirre Cerda 2012, Iquique",
+"Hospital Base San Jose Osorno":"Av Dr Guillermo Buhler 1765, Osorno",
+"Hospital Veterinario Manuel Bulnes":"Manuel Bulnes 1598, Concepcion",
+"Hospital Veterinario Santiago":"Av Santa Rosa 1934, Santiago",
+"IMABOX":"Bernardo O´Higgins 437, Panguipulli",
+"IMAVAL":"Av Francia 1655, Valdivia",
+"INMEVET":"El Olimpo 445, Santiago",
+"San Rafael Centro de Salud":"San Martin 643, Linares",
+"Villa Alemana Medica":"Maturana 98, Villa Alemana"
 };
 var lastAuto='';
 $('cliente').onchange=function(){
@@ -139,13 +156,11 @@ var EQ={
 'Tomógrafo':[
  {k:'Marca / modelo',t:'text'},{k:'N° de serie',t:'text'},
  {k:'Cortes (slices)',t:'sel',o:['16','32','64','128','256 o más']},
- {k:'Contador de exploraciones',t:'num'},{k:'Horas del tubo de rayos X',t:'num'},
+ {k:'Contador de exploraciones',t:'num'},
  {k:'Calibración de aire',t:'sel',o:['No realizada','OK','Fallida']},
  {k:'Control de calidad con fantoma',t:'sel',o:['No realizado','Aprobado','No aprobado']},
  {k:'Detalle del fallo del fantoma',t:'text',if:['Control de calidad con fantoma','No aprobado']},
- {k:'Temperatura de sala (°C)',t:'num'},
- {k:'¿Se reemplazó el tubo?',t:'sel',o:SN},
- {k:'N° de serie del tubo nuevo',t:'text',if:['¿Se reemplazó el tubo?','Sí']}],
+ {k:'Temperatura de sala (°C)',t:'num'}],
 'Resonancia magnética':[
  {k:'Marca / modelo',t:'text'},{k:'N° de serie',t:'text'},
  {k:'Campo magnético',t:'sel',o:['1.5 T','3 T','Otro']},
@@ -156,6 +171,22 @@ var EQ={
  {k:'Marca / modelo',t:'text'},{k:'N° de serie',t:'text'},
  {k:'kV medido',t:'num'},{k:'mAs medido',t:'num'},
  {k:'Prueba de colimador',t:'sel',o:['OK','Fuera de tolerancia']}],
+'Rayos X portátil':[
+ {k:'Marca / modelo',t:'text'},{k:'N° de serie',t:'text'},
+ {k:'kV medido',t:'num'},{k:'mAs medido',t:'num'},
+ {k:'Prueba de colimador',t:'sel',o:['OK','Fuera de tolerancia']},
+ {k:'Baterías',t:'sel',o:['OK','Degradadas','Reemplazadas']},
+ {k:'Cable / pulsador de disparo',t:'sel',o:['OK','Con falla']},
+ {k:'Detalle de la falla del cable / pulsador',t:'text',if:['Cable / pulsador de disparo','Con falla']}],
+'Arco en C':[
+ {k:'Marca / modelo',t:'text'},{k:'N° de serie',t:'text'},
+ {k:'Tipo de detector',t:'sel',o:['Detector plano','Intensificador de imagen']},
+ {k:'Horas del tubo de rayos X',t:'num'},
+ {k:'kV medido',t:'num'},{k:'mAs medido',t:'num'},
+ {k:'Calidad de imagen',t:'sel',o:['OK','Degradada']},
+ {k:'Detalle de la calidad de imagen',t:'text',if:['Calidad de imagen','Degradada']},
+ {k:'Movimientos del arco',t:'sel',o:['OK','Con falla']},
+ {k:'Detalle de la falla de movimiento',t:'text',if:['Movimientos del arco','Con falla']}],
 'Ecógrafo':[
  {k:'Marca / modelo',t:'text'},{k:'N° de serie',t:'text'},
  {k:'¿Falla en transductor?',t:'sel',o:SN},
@@ -193,9 +224,11 @@ function mk(box,list){
 }
 var CK={
 'general':['Inspección visual del equipo','Limpieza del equipo','Pruebas de funcionamiento','Equipo entregado operativo'],
-'Tomógrafo':['Revisión del tubo de rayos X','Calibración de aire','Control de calidad con fantoma','Revisión de gantry y mesa','Revisión de refrigeración','Respaldo de configuración'],
+'Tomógrafo':['Revisión del tubo de rayos X','Calibración de aire','Control de calidad con fantoma','Revisión de gantry y mesa','Revisión de refrigeración','Respaldo de configuración','Chequeo cadena RX','Chequeo cadena de adquisición','Limpieza de conectores de alto voltaje','Limpieza de slip ring','Disk cleanup','Desfragmentación HDD','FEE detector test','Rotor Coast Down Test','Performance Test','Visual Test'],
 'Resonancia magnética':['Revisión de nivel de helio','Revisión del chiller','Revisión de bobinas','Revisión de sala RF'],
 'Rayos X':['Verificación de kV y mAs','Prueba de colimador','Revisión de cables y conectores'],
+'Rayos X portátil':['Verificación de kV y mAs','Prueba de colimador','Revisión de baterías','Revisión de cable y pulsador de disparo','Revisión de ruedas y frenos'],
+'Arco en C':['Verificación de kV y mAs','Prueba de colimador','Revisión de calidad de imagen','Revisión de movimientos del arco','Revisión de monitores y carro','Revisión de cables y conectores'],
 'Ecógrafo':['Revisión de transductores','Limpieza de filtros','Prueba de imagen'],
 'Otro':[]};
 var C={},CU=[];
@@ -313,7 +346,7 @@ function build(d){
     doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(20);doc.text(doc.splitTextToSize(b||'-',TW/2-4),x,y+5)}
   pair('Cliente',d.cliente,M);pair('Fecha',d.fecha,M+TW/2);y+=14;
   pair('Dirección',d.dir,M);pair('Tipo',d.tipo,M+TW/2);y+=14;
-  pair('Técnico',d.tec,M);pair('Horario',(d.ini||'-')+' a '+(d.fin||'-'),M+TW/2);y+=16;
+  pair('Técnico',d.tec,M);y+=16;
   function block(t,txt){
     doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(29,95,214);doc.text(t.toUpperCase(),M,y);y+=5;
     doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(20);
