@@ -1,0 +1,22 @@
+INFORME DE SERVICIO - SOIM CHILE (app instalable)
+
+1) PUBLICAR (una sola vez)
+ - Entre a https://app.netlify.com/drop (cree una cuenta gratis).
+ - Arrastre la carpeta "pwa" completa (con todos los archivos adentro).
+ - Netlify le da un enlace https. Puede cambiarle el nombre en Site settings > Change site name.
+ - Alternativa: GitHub Pages o el hosting de su sitio web (debe ser https).
+
+2) INSTALAR EN CADA TELEFONO
+ - Android: abra el enlace en Chrome > menu (3 puntos) > "Instalar app" o "Agregar a pantalla principal".
+ - iPhone: abra el enlace en Safari > boton Compartir > "Añadir a pantalla de inicio".
+ - Abra la app una vez con internet para que quede lista para usar sin conexion.
+
+3) USO
+ - "Exportar PDF" descarga el archivo (nombre: fecha_Cliente.pdf).
+ - "Compartir PDF" abre el menu del telefono (WhatsApp, Drive, correo...). Solo aparece si el telefono lo permite.
+
+4) ACTUALIZAR
+ - Si cambia algo, vuelva a subir la carpeta a Netlify (Deploys > arrastrar de nuevo).
+ - Los telefonos toman la version nueva al abrir la app 1 o 2 veces con internet.
+
+Archivos: index.html (la app), manifest.webmanifest, sw.js (modo sin conexion), iconos png.
