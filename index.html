@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Informe de servicio</title>
 <link rel="manifest" href="manifest.webmanifest">
+<script src="config.js"></script>
 <meta name="theme-color" content="#1d5fd6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -103,9 +104,14 @@ button.s{padding:6px 10px;font-size:.85rem}
 </div>
 
 <div id="msg" role="status"></div>
+<div id="pend" style="margin:6px 0;font-size:.85rem" hidden><span id="pendt"></span> <button class="s" id="retry" type="button">Reintentar envío</button></div>
 <button class="p" id="pdf">Exportar PDF</button>
 <div style="height:8px"></div>
-<button id="share" style="width:100%" hidden>Compartir PDF (WhatsApp, Drive…)</button>
+<button id="wa" style="width:100%;background:#25D366;border-color:#25D366;color:#073b1a;font-weight:600">Enviar por WhatsApp</button>
+<div style="height:8px"></div>
+<button id="share" style="width:100%" hidden>Compartir PDF (otras apps)</button>
+<div style="height:8px"></div>
+<button id="wa" type="button" style="width:100%;background:#1f9d55;border-color:#1f9d55;color:#fff;font-weight:600">Enviar por WhatsApp</button>
 <div style="height:8px"></div>
 <button id="save" style="width:100%">Guardar borrador en este dispositivo</button>
 
@@ -395,6 +401,76 @@ function build(d){
   }
   return doc;
 }
+// ---- Envío a Google Drive (si config.js tiene url y clave)
+var CFG=window.SOIM||{},CLOUD=!!(CFG.url&&CFG.key),lastErr='';
+function idb(){return new Promise(function(res,rej){var q=indexedDB.open('soim',1);q.onupgradeneeded=function(){q.result.createObjectStore('q',{keyPath:'id'})};q.onsuccess=function(){res(q.result)};q.onerror=function(){rej(q.error)}})}
+function qdo(mode,fn){return idb().then(function(db){return new Promise(function(res,rej){var t=db.transaction('q',mode),r=fn(t.objectStore('q'));t.oncomplete=function(){res(r&&r.result)};t.onerror=function(){rej(t.error)}})})}
+function qall(){return qdo('readonly',function(s){return s.getAll()})}
+function qput(o){return qdo('readwrite',function(s){return s.put(o)})}
+function qdel(id){return qdo('readwrite',function(s){return s.delete(id)})}
+function hs(t){var h=5381;for(var i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return(h>>>0).toString(36)+'-'+t.length.toString(36)}
+function b64(blob){return new Promise(function(res,rej){var f=new FileReader();f.onload=function(){res(String(f.result).split(',')[1])};f.onerror=rej;f.readAsDataURL(blob)})}
+async function post(o){
+  var r=await fetch(CFG.url,{method:'POST',body:JSON.stringify({key:CFG.key,id:o.id,name:o.name,fecha:o.fecha,cliente:o.cliente,tecnico:o.tecnico,equipo:o.equipo,tipo:o.tipo,pdf:o.pdf})});
+  var j=await r.json();if(!j.ok)throw new Error(j.error||'error del servidor');return j;
+}
+async function pending(){
+  if(!CLOUD)return;
+  try{var n=(await qall()).length;$('pend').hidden=!n;$('pendt').textContent=n?n+' informe(s) pendiente(s) de enviar a Drive.':''}catch(e){}
+}
+var flushing=false;
+async function flush(){
+  if(!CLOUD||flushing||!navigator.onLine)return;
+  flushing=true;
+  try{var all=await qall();for(var i=0;i<all.length;i++){try{await post(all[i]);await qdel(all[i].id);lastErr=''}catch(e){lastErr=e&&e.message||String(e)}}}catch(e){}
+  flushing=false;await pending();
+}
+async function sendCloud(r){
+  if(!CLOUD)return;
+  try{
+    var d=r.d,o={id:d.fecha+'-'+hs(JSON.stringify(d)),name:d.fecha+'_'+d.cliente.replace(/[^\w\-]+/g,'_')+'_'+(d.tec||'').replace(/[^\w\-]+/g,'_')+'_'+new Date().toTimeString().slice(0,5).replace(':','')+'.pdf',fecha:d.fecha,cliente:d.cliente,tecnico:d.tec,equipo:d.eq,tipo:d.tipo,pdf:await b64(r.blob)};
+    await qput(o);say('PDF listo. Enviando a Drive…');
+    await flush();
+    var quedo=(await qall()).some(function(x){return x.id===o.id});
+    if(!quedo)say('PDF listo y enviado a Drive ✓');
+    else say(navigator.onLine?'PDF listo, pero no se pudo enviar a Drive ('+lastErr+'). Quedó pendiente.':'PDF listo. Sin internet: el envío a Drive quedó pendiente y se hará solo.',navigator.onLine);
+  }catch(e){say('PDF listo, pero no se pudo preparar el envío a Drive: '+(e&&e.message||e),1)}
+}
+$('retry').onclick=async function(){say('Enviando pendientes…');await flush();say(($('pend').hidden)?'Todo enviado a Drive ✓':'Siguen pendientes: '+(lastErr||'sin conexión'),!$('pend').hidden)};
+$('wa').onclick=async function(){
+  var r=await makePdf();if(!r)return;
+  var d=r.d,txt='*Informe de servicio*\nCliente: '+d.cliente+(d.dir?'\nDirección: '+d.dir:'')+'\nFecha: '+d.fecha+(d.eq?'\nEquipo: '+d.eq:'')+'\nTipo: '+d.tipo+(d.tec?'\nTécnico: '+d.tec:'');
+  var f=null;try{f=new File([r.blob],r.name,{type:'application/pdf'})}catch(e){}
+  if(f&&navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],text:txt,title:r.name});say('Elija WhatsApp en el menú para enviar el PDF.');await sendCloud(r);return}
+    catch(e){if(e&&e.name==='AbortError'){say('Cancelado.',1);return}}
+  }
+  try{var u=URL.createObjectURL(r.blob),a=document.createElement('a');a.href=u;a.download=r.name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},60000)}catch(e){}
+  var num=String(CFG.wa||'').replace(/\D/g,'');
+  window.open('https://wa.me/'+num+'?text='+encodeURIComponent(txt+'\n\n(El PDF va adjunto aparte)'),'_blank');
+  say('PDF descargado. En WhatsApp, toque el clip y adjunte '+r.name+'.');
+  await sendCloud(r);
+};
+$('wa').onclick=async function(){
+  var r=await makePdf();if(!r)return;
+  var txt='Informe de servicio SOIM Chile\nCliente: '+r.d.cliente+'\nFecha: '+r.d.fecha+(r.d.tec?'\nTécnico: '+r.d.tec:'')+(r.d.eq?'\nEquipo: '+r.d.eq:'');
+  var f=null;try{f=new File([r.blob],r.name,{type:'application/pdf'})}catch(e){}
+  try{
+    if(f&&navigator.canShare&&navigator.canShare({files:[f]})){
+      await navigator.share({files:[f],text:txt,title:r.name});
+      say('Elija WhatsApp en el menú y el contacto o grupo.');
+    }else{
+      var u=URL.createObjectURL(r.blob),a=document.createElement('a');a.href=u;a.download=r.name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(function(){URL.revokeObjectURL(u)},60000);
+      say('Este dispositivo no permite adjuntar desde la app. Se descargó el PDF: adjúntelo en WhatsApp.');
+      window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+    }
+  }catch(e){say(e&&e.name==='AbortError'?'Cancelado.':'No se pudo abrir WhatsApp: '+(e&&e.message||e),1)}
+  await sendCloud(r);
+};
+window.addEventListener('online',flush);
+setTimeout(function(){pending();flush()},1500);
+
 async function makePdf(){
   var d=data();
   if(!d.cliente){say('Seleccione el cliente.',1);return null}
@@ -402,7 +478,7 @@ async function makePdf(){
   if(!window.jspdf){say('No se cargó el generador de PDF. Conéctese a internet una vez y reintente.',1);return null}
   try{
     var buf=build(d).output('arraybuffer');
-    return{blob:new Blob([buf],{type:'application/pdf'}),name:d.fecha+'_'+d.cliente.replace(/[^\w\-]+/g,'_')+'.pdf'};
+    return{d:d,blob:new Blob([buf],{type:'application/pdf'}),name:d.fecha+'_'+d.cliente.replace(/[^\w\-]+/g,'_')+'.pdf'};
   }catch(e){say('Error al generar el PDF: '+(e&&e.message||e),1);return null}
 }
 $('pdf').onclick=async function(){
@@ -413,14 +489,16 @@ $('pdf').onclick=async function(){
     setTimeout(function(){URL.revokeObjectURL(u)},60000);
     say('PDF descargado: '+r.name);
   }catch(e){say('No se pudo descargar: '+(e&&e.message||e),1)}
+  await sendCloud(r);
 };
 try{if(navigator.canShare&&navigator.canShare({files:[new File([''],'a.pdf',{type:'application/pdf'})]}))$('share').hidden=false}catch(e){}
 $('share').onclick=async function(){
   var r=await makePdf();if(!r)return;
   try{await navigator.share({files:[new File([r.blob],r.name,{type:'application/pdf'})],title:r.name});say('PDF compartido.')}
   catch(e){say(e&&e.name==='AbortError'?'Cancelado.':'No se pudo compartir: '+(e&&e.message||e),1)}
+  await sendCloud(r);
 };
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(function(){})})}
 })();
 </script>
 </body>
