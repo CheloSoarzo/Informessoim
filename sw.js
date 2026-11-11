@@ -1,5 +1,5 @@
-const V='soim-informes-v2';
-const CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
+const V='soim-informes-v3';
+const CORE=['./','./index.html','./manifest.webmanifest','./config.js','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
 const JS='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(V).then(c=>Promise.all([

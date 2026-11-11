@@ -1,0 +1,1 @@
+window.SOIM={url:'',key:''};

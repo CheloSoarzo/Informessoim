@@ -62,7 +62,7 @@ button.s{padding:6px 10px;font-size:.85rem}
 <h1>Informe de servicio</h1>
 
 <div class="card"><h2>Datos generales</h2>
-<label for="cliente">Cliente</label><select id="cliente"><option value="">Seleccione cliente…</option><option>Centro de Salud San Rafael</option><option>Centro Imagenes INSI</option><option>Centro Medico Colina Salud</option><option>Centro Medico Isapre Fundacion</option><option>Centro Medico Rancagua</option><option>Centro Medico Santa Catalina Buin</option><option>Centro Medico Santa Catalina Paine</option><option>Centro Medico Veterinario Rucalaf</option><option>Centro Scanner Peñaflor</option><option>Clinica Alemana Osorno</option><option>Clinica Altacura</option><option>Clinica Miraflores</option><option>Clinica Veterinaria Hannover</option><option>Clinica Veterinaria Zoomundo</option><option>Hospital Base San Jose Osorno</option><option>Hospital Veterinario Manuel Bulnes</option><option>Hospital Veterinario Santiago</option><option>IMABOX</option><option>IMAVAL</option><option>INMEVET</option><option>San Rafael Centro de Salud</option><option>Villa Alemana Medica</option></select>
+<label for="cliente">Cliente</label><select id="cliente"><option value="">Seleccione cliente…</option><option>Centro de Salud San Rafael</option><option>Centro Imagenes INSI</option><option>Centro Medico Colina Salud</option><option>Centro Medico Isapre Fundacion</option><option>Centro Medico Rancagua</option><option>Centro Medico Santa Catalina Buin</option><option>Centro Medico Santa Catalina Paine</option><option>Centro Medico Veterinario Rucalaf</option><option>Centro Scanner Peñaflor</option><option>Clinica Alemana Osorno</option><option>Clinica Altacura</option><option>Clinica Miraflores</option><option>Clinica Veterinaria Hannover</option><option>Clinica Veterinaria Zoomundo</option><option>Hospital Base San Jose Osorno</option><option>Hospital de Nueva Imperial</option><option>Hospital Veterinario Manuel Bulnes</option><option>Hospital Veterinario Santiago</option><option>IMABOX</option><option>IMAVAL</option><option>INMEVET</option><option>San Rafael Centro de Salud</option><option>Villa Alemana Medica</option></select>
 <label for="dir">Dirección</label><input id="dir" autocomplete="off">
 <div class="row">
 <div><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
@@ -107,8 +107,6 @@ button.s{padding:6px 10px;font-size:.85rem}
 <div id="pend" style="margin:6px 0;font-size:.85rem" hidden><span id="pendt"></span> <button class="s" id="retry" type="button">Reintentar envío</button></div>
 <button class="p" id="pdf">Exportar PDF</button>
 <div style="height:8px"></div>
-<button id="wa" style="width:100%;background:#25D366;border-color:#25D366;color:#073b1a;font-weight:600">Enviar por WhatsApp</button>
-<div style="height:8px"></div>
 <button id="share" style="width:100%" hidden>Compartir PDF (otras apps)</button>
 <div style="height:8px"></div>
 <button id="wa" type="button" style="width:100%;background:#1f9d55;border-color:#1f9d55;color:#fff;font-weight:600">Enviar por WhatsApp</button>
@@ -141,6 +139,7 @@ var ADDR={
 "Clinica Veterinaria Hannover":"Raul Bitran 1725, La Serena",
 "Clinica Veterinaria Zoomundo":"Pedro Aguirre Cerda 2012, Iquique",
 "Hospital Base San Jose Osorno":"Av Dr Guillermo Buhler 1765, Osorno",
+"Hospital de Nueva Imperial":"Castellon 115, Nueva Imperial",
 "Hospital Veterinario Manuel Bulnes":"Manuel Bulnes 1598, Concepcion",
 "Hospital Veterinario Santiago":"Av Santa Rosa 1934, Santiago",
 "IMABOX":"Bernardo O´Higgins 437, Panguipulli",
@@ -420,7 +419,7 @@ async function pending(){
 }
 var flushing=false;
 async function flush(){
-  if(!CLOUD||flushing||!navigator.onLine)return;
+  if(!CLOUD||flushing||!navigator.onLine){await pending();return}
   flushing=true;
   try{var all=await qall();for(var i=0;i<all.length;i++){try{await post(all[i]);await qdel(all[i].id);lastErr=''}catch(e){lastErr=e&&e.message||String(e)}}}catch(e){}
   flushing=false;await pending();
@@ -428,7 +427,7 @@ async function flush(){
 async function sendCloud(r){
   if(!CLOUD)return;
   try{
-    var d=r.d,o={id:d.fecha+'-'+hs(JSON.stringify(d)),name:d.fecha+'_'+d.cliente.replace(/[^\w\-]+/g,'_')+'_'+(d.tec||'').replace(/[^\w\-]+/g,'_')+'_'+new Date().toTimeString().slice(0,5).replace(':','')+'.pdf',fecha:d.fecha,cliente:d.cliente,tecnico:d.tec,equipo:d.eq,tipo:d.tipo,pdf:await b64(r.blob)};
+    var d=r.d,o={id:d.fecha+'-'+hs(JSON.stringify(d))+'-'+Date.now().toString(36),name:d.fecha+'_'+d.cliente.replace(/[^\w\-]+/g,'_')+'_'+(d.tec||'').replace(/[^\w\-]+/g,'_')+'_'+new Date().toTimeString().slice(0,5).replace(':','')+'.pdf',fecha:d.fecha,cliente:d.cliente,tecnico:d.tec,equipo:d.eq,tipo:d.tipo,pdf:await b64(r.blob)};
     await qput(o);say('PDF listo. Enviando a Drive…');
     await flush();
     var quedo=(await qall()).some(function(x){return x.id===o.id});
@@ -449,23 +448,6 @@ $('wa').onclick=async function(){
   var num=String(CFG.wa||'').replace(/\D/g,'');
   window.open('https://wa.me/'+num+'?text='+encodeURIComponent(txt+'\n\n(El PDF va adjunto aparte)'),'_blank');
   say('PDF descargado. En WhatsApp, toque el clip y adjunte '+r.name+'.');
-  await sendCloud(r);
-};
-$('wa').onclick=async function(){
-  var r=await makePdf();if(!r)return;
-  var txt='Informe de servicio SOIM Chile\nCliente: '+r.d.cliente+'\nFecha: '+r.d.fecha+(r.d.tec?'\nTécnico: '+r.d.tec:'')+(r.d.eq?'\nEquipo: '+r.d.eq:'');
-  var f=null;try{f=new File([r.blob],r.name,{type:'application/pdf'})}catch(e){}
-  try{
-    if(f&&navigator.canShare&&navigator.canShare({files:[f]})){
-      await navigator.share({files:[f],text:txt,title:r.name});
-      say('Elija WhatsApp en el menú y el contacto o grupo.');
-    }else{
-      var u=URL.createObjectURL(r.blob),a=document.createElement('a');a.href=u;a.download=r.name;document.body.appendChild(a);a.click();a.remove();
-      setTimeout(function(){URL.revokeObjectURL(u)},60000);
-      say('Este dispositivo no permite adjuntar desde la app. Se descargó el PDF: adjúntelo en WhatsApp.');
-      window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
-    }
-  }catch(e){say(e&&e.name==='AbortError'?'Cancelado.':'No se pudo abrir WhatsApp: '+(e&&e.message||e),1)}
   await sendCloud(r);
 };
 window.addEventListener('online',flush);
